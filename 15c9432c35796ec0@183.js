@@ -15,9 +15,9 @@ function _chart(d3, data, width, height, drag, invalidation) {
   // console.log('this is the root ', root);
   // create links from d3 : oobject containing the source and the target and bunch of data in a recursion manner
   const links = root.links();
-  // create nodes from d3 with each children and their children in a recursion manner
+  // create nodes from d3 with each children and their children in a recursion manner and add to each node some data related to d3.js such as the childrens , data , depth , height , index and the parent node if exists.
   const nodes = root.descendants();
-  console.log('this is the nodes', nodes);
+  // console.log('this is the nodes', nodes);
 
   // define how a node will behave when dragged
   const simulation = d3
@@ -27,11 +27,12 @@ function _chart(d3, data, width, height, drag, invalidation) {
       d3
         .forceLink(links)
         .id((d) => d.id)
-        .distance(10)
+        .distance(20)
+        // well separate and visualise the lines
         .strength(1)
     )
     // strength define how long the line of the link is
-    .force('charge', d3.forceManyBody().strength(-50))
+    .force('charge', d3.forceManyBody().strength(-500))
     .force('x', d3.forceX())
     .force('y', d3.forceY());
 
@@ -63,14 +64,15 @@ function _chart(d3, data, width, height, drag, invalidation) {
     .attr('fill', (d) => (d.children ? null : 'red'))
     .attr('stroke', (d) => (d.children ? null : '#fff'))
     // define the radius of all the nodes
-    .attr('r', 3.5)
+    .attr('r', 7.5)
     // apply the simulation when the node is dragged
+    // this is the animation when dragging a node with the mouse
     .call(drag(simulation));
 
   // this the tooltip
   node.append('title').text((d) => `${d.data.name} `);
 
-  // do the animation when drag : define the behavior of the simulation
+  // do the animation when drag : define the behavior of the simulation: this is the dragging animation
   simulation.on('tick', () => {
     // update the position of the link
     link
@@ -81,17 +83,18 @@ function _chart(d3, data, width, height, drag, invalidation) {
     // update the position of the node
     node.attr('cx', (d) => d.x).attr('cy', (d) => d.y);
   });
-  // stop the simulation
+  // this is one of the params passed to the chart function
   invalidation.then(() => simulation.stop());
 
   return svg.node();
 }
 
-// return the data as an object  in a nested arrays of childrens
+// return the data as an object  in a nested arrays of childrens: convert the data from json to a js object
 function _data(FileAttachment) {
   const thisdata = FileAttachment('flare-2.json').json();
   // console.log(thisdata.then((data) => console.log(data)));
   return thisdata;
+  // return the data as a javascript object
 }
 
 // return the height of the graph
@@ -99,8 +102,9 @@ function _height() {
   return 600;
 }
 
-// add the drag functionality to the graph
+// define the drag behavioe when dragging a node  in the graoh
 function _drag(d3) {
+  // return a function witch will be applied to the nodes of the graph , this function has all the phases when dragging a node and yodate the position of the node during these phases
   return (simulation) => {
     function dragstarted(event, d) {
       if (!event.active) simulation.alphaTarget(0.3).restart();
@@ -119,6 +123,7 @@ function _drag(d3) {
       d.fy = null;
     }
 
+    // define the behavior of the drag in d3
     return d3
       .drag()
       .on('start', dragstarted)
@@ -152,6 +157,8 @@ export default function define(runtime, observer) {
       },
     ],
   ]);
+
+  // console.log('the file attachments', fileAttachments);
   main.builtin(
     'FileAttachment',
     runtime.fileAttachments((name) => fileAttachments.get(name))
@@ -159,16 +166,24 @@ export default function define(runtime, observer) {
   // main.variable(observer()).define(['md'], _1);
 
   // draw the chart using the _chart private function
+  // we will define the pramas after the use of the _chart
   main.variable(observer('chart')).define(
     'chart',
     //  ass the params to the chart function
     ['d3', 'data', 'width', 'height', 'drag', 'invalidation'],
-    // draw the chart in the main (body)
+    // draw the chart in the main (body) using the previously defined params
     _chart
   );
+  // defining the passed params to _chart private function
+
+  // get tje data param from the file
   main.variable(observer('data')).define('data', ['FileAttachment'], _data);
+  // get the height from the height private function
   main.variable(observer('height')).define('height', _height);
+  // get the drag param from the _drag private function
   main.variable(observer('drag')).define('drag', ['d3'], _drag);
+  // get the d3 module from the _d3 private function
   main.variable(observer('d3')).define('d3', ['require'], _d3);
+  // return the main witch contains the chart to combine it with the runtime module and draw it in the browser
   return main;
 }
